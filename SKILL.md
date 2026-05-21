@@ -1,10 +1,9 @@
 ---
 name: xui-node-manager
 description: >-
-  Create VLESS+Reality+TCP nodes on 3x-ui panels with SOCKS5 outbound binding.
-  Use when user provides SOCKS5 exit info and specifies which 3x-ui server to target,
-  or registers new 3x-ui servers. Triggers on giving socks5 ip:port:user:pass
-  with a server name, or requests like create node, socks5 exit, 3x-ui, configure server.
+  Install 3x-ui panels on servers via SSH, then create VLESS+Reality+TCP nodes
+  with SOCKS5 outbound binding. Triggers on giving SSH or SOCKS5 info
+  with a server name, or requests like install panel, create node, configure 3x-ui.
 ---
 
 # 3x-ui Node Manager
