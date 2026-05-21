@@ -27,9 +27,9 @@ unzip xui-node-manager.skill -d ~/.openclaw/skills/
 
 | 你想做什么 | 跟 AI 说 | AI 执行 |
 |-----------|---------|--------|
-| 装面板 | 「用这个 IP 装个 3x-ui」 | `xui_install.sh` |
+| 装面板 | 「用这个 IP:端口:用户名:密码 装个 3x-ui」 | `xui_install.sh` |
 | 注册面板 | 「把这个面板加到 server-2」 | 修改 `servers.yaml` |
-| 创建节点 | 「出口 204.0.23.109 配到 server-1」 | `xui_batch.py` |
+| 创建节点 | 「出口 214.0.13.15 配到 server-1」 | `xui_batch.py` |
 
 ## 依赖
 
