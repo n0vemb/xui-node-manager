@@ -1,0 +1,17 @@
+# ============================================================
+# 3x-ui 服务器列表
+# ============================================================
+
+proxy: socks5://127.0.0.1:10808  # or empty for direct
+
+defaults:
+  dest: 1.1.1.1:443
+  server_names: [www.microsoft.com]
+  port: random
+  port_range: [10000, 60000]
+
+servers:
+  - name: server-1
+    url: http://<ip>:<port>/<path>
+    username: <user>
+    password: <pass>
