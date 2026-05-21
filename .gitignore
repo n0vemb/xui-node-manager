@@ -1,0 +1,6 @@
+scripts/servers.yaml
+.skill
+*.skill
+__pycache__/
+*.pyc
+.DS_Store
