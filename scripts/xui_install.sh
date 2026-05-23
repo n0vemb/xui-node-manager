@@ -89,6 +89,9 @@ if [ "$SSL_FAILED" -gt 0 ]; then
     echo "  ⚠️  SSL 证书申请失败，面板使用 HTTP"
 fi
 
+# 去除 URL 尾部斜杠（避免拼接 login 时产生 //login）
+ACCESS_URL=$(echo "$ACCESS_URL" | sed 's|/$||')
+
 if [ -z "$ACCESS_URL" ]; then
     echo ""
     echo "  ❌ 未能提取到面板信息。请检查完整输出。"

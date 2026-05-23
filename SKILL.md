@@ -1,18 +1,39 @@
 ---
 name: xui-node-manager
 description: >-
-  Install 3x-ui panels on servers via SSH, then create VLESS+Reality+TCP nodes
-  with SOCKS5 outbound binding. Triggers on giving SSH or SOCKS5 info
-  with a server name, or requests like install panel, create node, configure 3x-ui.
+  Install 3x-ui panels on servers via SSH, create VLESS+Reality+TCP nodes
+  with SOCKS5 outbound binding. Triggers on giving SOCKS5 ip:port:user:pass
+  with a server name, or requests like install panel, create node, 3x-ui.
 ---
 
 # 3x-ui Node Manager
 
-## Workflow
+## Workflows
+
+### 0. Install 3x-ui panel (one-time per server)
+
+User provides SSH login info. Run:
+
+```bash
+bash scripts/xui_install.sh <ip> <ssh_port> <username> <password>
+```
+
+What the script does:
+1. SSH 登录到服务器
+2. 运行 `bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)`
+3. 全程自动按默认选项安装（自动回车确认）
+4. 等待安装完成
+5. 提取面板信息（URL、用户名、密码、端口、WebBasePath、API Token）
+
+**Install done. Now you MUST:**
+
+1. Add the new panel to `scripts/servers.yaml` in the `servers:` list  
+   - 脚本自动检测 SSL 是否成功，失败则 URL 用 `http://` 而非 `https://`
+2. Display the installation result to the user (URL, username, password, etc.)
 
 ### 1. Server registration (one-time)
 
-Edit `scripts/servers.yaml` using `scripts/servers.yaml.example` as template:
+Edit `scripts/servers.yaml` using `scripts/servers.yaml.example` as template. Can also be done manually or automatically after install.
 
 ```yaml
 proxy: socks5://127.0.0.1:10808
