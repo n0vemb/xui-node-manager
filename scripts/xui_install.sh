@@ -114,3 +114,48 @@ echo ""
 echo "--- JSON ---"
 echo "{\"access_url\":\"$ACCESS_URL\",\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\",\"port\":\"$PORT\",\"webpath\":\"$WEBPATH\",\"api_token\":\"$API_TOKEN\"}"
 echo "--- END ---"
+
+# ═══════════════════════════════════════════════════════════════════════
+# DNS 防泄露：修补 DB 模板（一次性，后续创建节点无需再管）
+# ═══════════════════════════════════════════════════════════════════════
+echo ""
+echo "🔧 DNS 防泄露 — 修补 Xray DB 模板 ..."
+
+sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER@$SSH_IP" \
+  "python3 -c '
+import json, sqlite3
+DB = \"/etc/x-ui/x-ui.db\"
+conn = sqlite3.connect(DB)
+c = conn.cursor()
+c.execute(\"SELECT value FROM settings WHERE key='xrayTemplateConfig'\")
+row = c.fetchone()
+if row:
+    cfg = json.loads(row[0])
+    changed = False
+    if not cfg.get(\"dns\"):
+        cfg[\"dns\"] = {\"servers\": [
+            {\"address\": \"1.1.1.1\", \"port\": 53, \"tag\": \"dns-cf\"},
+            {\"address\": \"8.8.8.8\", \"port\": 53, \"tag\": \"dns-google\"},
+            {\"address\": \"9.9.9.9\", \"port\": 53, \"tag\": \"dns-quad9\"},
+            {\"address\": \"223.5.5.5\", \"port\": 53, \"tag\": \"dns-ali\", \"domains\": [\"geosite:cn\"]},
+            {\"address\": \"localhost\", \"port\": 53, \"tag\": \"dns-local\", \"skipFallback\": True},
+        ]}
+        changed = True
+        print(\"  ✅ DNS 配置段已添加\")
+    for o in cfg.get(\"outbounds\", []):
+        if o.get(\"protocol\") == \"socks\" and o.get(\"domainStrategy\") != \"AsIs\":
+            o[\"domainStrategy\"] = \"AsIs\"
+            changed = True
+            print(f\"  ✅ {o.get(\\\"tag\\\",\\\"?\\\")} → domainStrategy=AsIs\")
+    if cfg.get(\"routing\", {}).get(\"domainStrategy\") != \"IPIfNonMatch\":
+        cfg.setdefault(\"routing\", {})[\"domainStrategy\"] = \"IPIfNonMatch\"
+        changed = True
+        print(\"  ✅ routing → IPIfNonMatch\")
+    if changed:
+        c.execute(\"UPDATE settings SET value=? WHERE key='xrayTemplateConfig'\", (json.dumps(cfg, ensure_ascii=False),))
+        conn.commit()
+        print(\"  ✅ DB 模板已固化，无需守护进程\")
+    else:
+        print(\"  ℹ️  模板已是最优\")
+conn.close()
+'" 2>&1 || echo "  ⚠️  DNS 补丁执行失败，可稍后手动运行 xui_db_patch.sh"

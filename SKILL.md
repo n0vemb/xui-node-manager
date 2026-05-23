@@ -24,31 +24,17 @@ What the script does:
 2. 运行 3x-ui 官方安装脚本
 3. 全程自动按默认选项安装（自动回车确认）
 4. 提取面板信息（URL、用户名、密码、端口、WebBasePath、API Token）
+5. **自动修补 Xray DB 模板：DNS + domainStrategy=AsIs + IPIfNonMatch（DNS 防泄露）**
 
 **After install, you MUST:**
 
 1. Add the new panel to `scripts/servers.yaml` in the `servers:` list
    - 脚本自动检测 SSL 是否成功，失败则 URL 用 `http://` 而非 `https://`
-2. Run the DNS leak protection DB patch (see step 1 below)
-3. Display the installation result to the user
+2. Display the installation result to the user
 
-### 1. DNS leak protection DB patch (one-time per server)
+No separate DNS fix step needed — it's built in.
 
-3x-ui regenerates `config.json` from its DB template, overwriting API-pushed config changes.
-This MUST be fixed once per server to prevent DNS leaks.
-
-```bash
-bash scripts/xui_db_patch.sh <ip> <ssh_port> <username> <password>
-```
-
-What it does:
-- SSHs to the server and patches the SQLite DB `xrayTemplateConfig`
-- Adds DNS server list (5 servers with tags)
-- Sets all SOCKS5 outbounds to `domainStrategy: "AsIs"` (no local DNS resolution)
-- Sets routing `domainStrategy: "IPIfNonMatch"`
-- Persistent: survives 3x-ui restarts, no daemon needed
-
-### 2. Create nodes (per-request)
+### 1. Create nodes (per-request)
 
 User gives SOCKS5 exit + target server. Run:
 
@@ -63,7 +49,9 @@ The script automatically:
 - Adds DNS config if missing
 - Restarts Xray after saving
 
-### 3. Display results (MANDATORY)
+DNS leak protection is built into every node creation — no extra steps.
+
+### 2. Display results (MANDATORY)
 
 After the script finishes, you MUST:
 
