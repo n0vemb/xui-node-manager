@@ -9,9 +9,14 @@ defaults:
   server_names: [www.microsoft.com]
   port: random
   port_range: [10000, 60000]
+  fingerprint: chrome
 
 servers:
   - name: server-1
     url: http://<ip>:<port>/<path>
     username: <user>
     password: <pass>
+    # 以下为可选 SSH 字段，用于一次性 DB 模板补丁（DNS 防泄露）
+    # ssh: root@<ip>:22
+    # ssh_key: ~/.ssh/id_rsa   # 或 ssh_key: /path/to/key
+    # ssh_pass: ""              # 或用密码（不推荐）

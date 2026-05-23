@@ -299,11 +299,12 @@ def bind_socks5_outbound(session: requests.Session, panel: dict,
     tag = f"socks5-{socks5['address']}"
     xs.setdefault("outbounds", [])
 
-    # 添加 SOCKS5 outbound（去重）
+    # 添加 SOCKS5 outbound（去重），带 domainStrategy 防 DNS 泄露
     if not any(o.get("tag") == tag for o in xs["outbounds"]):
         xs["outbounds"].append({
             "protocol": "socks",
             "tag": tag,
+            "domainStrategy": "AsIs",
             "settings": {
                 "servers": [{
                     "address": socks5["address"],
@@ -317,7 +318,32 @@ def bind_socks5_outbound(session: requests.Session, panel: dict,
         })
         print(f"  ✅ 已添加 SOCKS5 outbound: {tag}")
     else:
+        # 确保已存在的出站也有 domainStrategy
+        for o in xs["outbounds"]:
+            if o.get("tag") == tag and o.get("domainStrategy") != "AsIs":
+                o["domainStrategy"] = "AsIs"
         print(f"  ℹ️  SOCKS5 outbound 已存在")
+
+    # 确保所有 SOCKS5 出站都有 domainStrategy="AsIs"（补漏）
+    for o in xs["outbounds"]:
+        if o.get("protocol") == "socks":
+            o["domainStrategy"] = "AsIs"
+
+    # 路由 domainStrategy: IPIfNonMatch（防止本地 DNS 解析）
+    xs.setdefault("routing", {})["domainStrategy"] = "IPIfNonMatch"
+
+    # DNS 配置：提供带 tag 的 DNS 服务器列表，供不同出站按需匹配
+    if not xs.get("dns"):
+        xs["dns"] = {
+            "servers": [
+                {"address": "1.1.1.1", "port": 53, "tag": "dns-cf"},
+                {"address": "8.8.8.8", "port": 53, "tag": "dns-google"},
+                {"address": "9.9.9.9", "port": 53, "tag": "dns-quad9"},
+                {"address": "223.5.5.5", "port": 53, "tag": "dns-ali", "domains": ["geosite:cn"]},
+                {"address": "localhost", "port": 53, "tag": "dns-local", "skipFallback": True},
+            ]
+        }
+        print(f"  ✅ DNS 配置段已添加（5 个服务器）")
 
     # 添加路由规则（去重）
     xs.setdefault("routing", {}).setdefault("rules", [])

@@ -28,8 +28,9 @@ unzip xui-node-manager.skill -d ~/.openclaw/skills/
 | 你想做什么 | 跟 AI 说 | AI 执行 |
 |-----------|---------|--------|
 | 装面板 | 「用这个 IP:端口:用户名:密码 装个 3x-ui」 | `xui_install.sh` |
+| DNS 防泄露 | 「给 server-1 打 DNS 补丁」 | `xui_db_patch.sh`（一次性） |
 | 注册面板 | 「把这个面板加到 server-2」 | 修改 `servers.yaml` |
-| 创建节点 | 「出口 214.0.13.15 配到 server-1」 | `xui_batch.py` |
+| 创建节点 | 「出口 214.0.13.15 配到 server-1」 | `xui_batch.py`（含 DNS 保护） |
 
 ## 依赖
 
@@ -76,7 +77,19 @@ bash scripts/xui_install.sh <ip> <ssh端口> <用户名> <密码>
 python3 scripts/xui_batch.py --server <服务器名> --socks5 <ip:port:user:pass>
 ```
 
-创建 VLESS+Reality+TCP 入站 + SOCKS5 出站绑定 + 路由规则 + Xray 重启。
+创建 VLESS+Reality+TCP 入站 + SOCKS5 出站绑定 + 路由规则 + DNS 防泄露 + Xray 重启。
+
+### `xui_db_patch.sh` — DNS 防泄露补丁（每台服务器执行一次）
+
+```bash
+bash scripts/xui_db_patch.sh <ip> <ssh端口> <用户名> <密码>
+```
+
+修补 3x-ui SQLite DB 中的 `xrayTemplateConfig`：
+- 所有 SOCKS5 出站 `domainStrategy: "AsIs"`（本地不解析 DNS）
+- 路由 `domainStrategy: "IPIfNonMatch"`
+- DNS 配置段（5 个带标签服务器）
+- 持久化，无需守护进程，一次执行永久生效
 
 ### 自动配置项
 

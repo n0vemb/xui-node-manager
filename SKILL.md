@@ -2,33 +2,51 @@
 name: xui-node-manager
 description: >-
   Install 3x-ui panels on servers via SSH, then create VLESS+Reality+TCP nodes
-  with SOCKS5 outbound binding. Triggers on giving SSH or SOCKS5 info
-  with a server name, or requests like install panel, create node, configure 3x-ui.
+  with SOCKS5 outbound binding and DNS leak protection. Triggers on giving SSH
+  or SOCKS5 info with a server name, or requests like install panel, create node,
+  configure 3x-ui, DNS fix.
 ---
 
 # 3x-ui Node Manager
 
-## Workflow
+## Workflows
 
-### 1. Server registration (one-time)
+### 0. Install 3x-ui panel (one-time per server)
 
-Edit `scripts/servers.yaml` using `scripts/servers.yaml.example` as template:
+User provides SSH login info. Run:
 
-```yaml
-proxy: socks5://127.0.0.1:10808
-
-defaults:
-  dest: 1.1.1.1:443
-  server_names: [www.microsoft.com]
-  port: random
-  port_range: [10000, 60000]
-
-servers:
-  - name: server-1
-    url: http://<ip>:<port>/<path>
-    username: <user>
-    password: <pass>
+```bash
+bash scripts/xui_install.sh <ip> <ssh_port> <username> <password>
 ```
+
+What the script does:
+1. SSH 登录到服务器
+2. 运行 3x-ui 官方安装脚本
+3. 全程自动按默认选项安装（自动回车确认）
+4. 提取面板信息（URL、用户名、密码、端口、WebBasePath、API Token）
+
+**After install, you MUST:**
+
+1. Add the new panel to `scripts/servers.yaml` in the `servers:` list
+   - 脚本自动检测 SSL 是否成功，失败则 URL 用 `http://` 而非 `https://`
+2. Run the DNS leak protection DB patch (see step 1 below)
+3. Display the installation result to the user
+
+### 1. DNS leak protection DB patch (one-time per server)
+
+3x-ui regenerates `config.json` from its DB template, overwriting API-pushed config changes.
+This MUST be fixed once per server to prevent DNS leaks.
+
+```bash
+bash scripts/xui_db_patch.sh <ip> <ssh_port> <username> <password>
+```
+
+What it does:
+- SSHs to the server and patches the SQLite DB `xrayTemplateConfig`
+- Adds DNS server list (5 servers with tags)
+- Sets all SOCKS5 outbounds to `domainStrategy: "AsIs"` (no local DNS resolution)
+- Sets routing `domainStrategy: "IPIfNonMatch"`
+- Persistent: survives 3x-ui restarts, no daemon needed
 
 ### 2. Create nodes (per-request)
 
@@ -38,6 +56,12 @@ User gives SOCKS5 exit + target server. Run:
 pip install -r scripts/requirements.txt
 python3 scripts/xui_batch.py --server <name|all> --socks5 <ip:port:user:pass>
 ```
+
+The script automatically:
+- Adds `domainStrategy: "AsIs"` to all SOCKS5 outbounds in the running config
+- Sets routing `domainStrategy: "IPIfNonMatch"`
+- Adds DNS config if missing
+- Restarts Xray after saving
 
 ### 3. Display results (MANDATORY)
 
@@ -58,8 +82,9 @@ If port conflicts occur, ask the user before removing any inbound.
 
 ## Auto-generated settings
 
-- Remark: today's date (YYYY-MM-DD)
-- Port: random in [10000, 60000]
-- Client tag: last 2 octets of SOCKS5 IP + date suffix
-- Outbound tag: socks5-<ip>
+- Remark: `YYYY-MM-DD-<IP末尾两段>`
+- Port: random [10000, 60000]
+- Client tag: `<IP末尾两段>-YYYY-MM-DD`
+- Outbound tag: `socks5-<IP>`
 - Reality keys: from panel API
+- DNS: 5 upstream servers with tags, domainStrategy="AsIs" on all SOCKS outbounds
